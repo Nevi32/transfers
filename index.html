@@ -232,6 +232,15 @@
             background: #475569;
         }
 
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
         .search-section {
             background: #fff;
             padding: 25px;
@@ -406,6 +415,12 @@
             margin-top: 20px;
         }
 
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -455,6 +470,11 @@
             .edit-actions {
                 flex-direction: column;
             }
+
+            .export-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -502,9 +522,11 @@
             <div class="table-section">
                 <div class="table-actions">
                     <h2 style="color: #2c2c2c;">Transfer Records</h2>
-                    <div>
-                        <button onclick="exportToCSV()" class="btn btn-secondary">Download CSV</button>
-                        <button onclick="exportToXLSX()" class="btn btn-secondary">Download XLSX</button>
+                    <div class="export-buttons">
+                        <button onclick="exportToCSV()" class="btn btn-secondary">Download CSV (All)</button>
+                        <button onclick="exportToXLSX()" class="btn btn-secondary">Download XLSX (All)</button>
+                        <button onclick="exportSuspiciousToCSV()" class="btn btn-danger">Download CSV (Suspicious Only)</button>
+                        <button onclick="exportSuspiciousToXLSX()" class="btn btn-danger">Download XLSX (Suspicious Only)</button>
                     </div>
                 </div>
                 <div style="overflow-x: auto;">
@@ -841,7 +863,12 @@
             }
         }
 
-        // Export to CSV
+        // Get suspicious transfers only
+        function getSuspiciousTransfers() {
+            return transfers.filter(t => t.suspicious);
+        }
+
+        // Export to CSV (All Data)
         function exportToCSV() {
             if (transfers.length === 0) {
                 alert('No data to export');
@@ -870,11 +897,11 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `transfers_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `transfers_all_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
         }
 
-        // Export to XLSX
+        // Export to XLSX (All Data)
         function exportToXLSX() {
             if (transfers.length === 0) {
                 alert('No data to export');
@@ -895,8 +922,70 @@
             
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Transfers');
-            XLSX.writeFile(wb, `transfers_${new Date().toISOString().split('T')[0]}.xlsx`);
+            XLSX.utils.book_append_sheet(wb, ws, 'All Transfers');
+            XLSX.writeFile(wb, `transfers_all_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        // Export SUSPICIOUS transfers to CSV
+        function exportSuspiciousToCSV() {
+            const suspiciousTransfers = getSuspiciousTransfers();
+            
+            if (suspiciousTransfers.length === 0) {
+                alert('No suspicious transfers to export');
+                return;
+            }
+            
+            const headers = ['Date', 'From Shop', 'To Shop', 'Shoe Name', 'ATNO', 'Size', 'Color', 'Staff', 'Suspicious'];
+            const rows = suspiciousTransfers.map(t => [
+                t.date,
+                t.fromShop,
+                t.toShop,
+                t.shoeName,
+                t.atno,
+                t.size,
+                t.color,
+                t.staff,
+                'Yes'
+            ]);
+            
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `transfers_suspicious_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        // Export SUSPICIOUS transfers to XLSX
+        function exportSuspiciousToXLSX() {
+            const suspiciousTransfers = getSuspiciousTransfers();
+            
+            if (suspiciousTransfers.length === 0) {
+                alert('No suspicious transfers to export');
+                return;
+            }
+            
+            const data = suspiciousTransfers.map(t => ({
+                'Date': t.date,
+                'From Shop': t.fromShop,
+                'To Shop': t.toShop,
+                'Shoe Name': t.shoeName,
+                'ATNO': t.atno,
+                'Size': t.size,
+                'Color': t.color,
+                'Staff': t.staff,
+                'Suspicious': 'Yes'
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Suspicious Transfers');
+            XLSX.writeFile(wb, `transfers_suspicious_${new Date().toISOString().split('T')[0]}.xlsx`);
         }
     </script>
 </body>
